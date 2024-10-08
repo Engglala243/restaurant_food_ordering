@@ -57,9 +57,22 @@ const selectRecord = (tableName) => {
   });
 };
 
+const customRecord = (query, params) => {
+  return new Promise((resolve, reject) => {
+    pool.query(query, params, (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+};
+
 module.exports = {
   createTable,
   checkRecordExists,
   insertRecord,
   selectRecord,
+  customRecord,
 };

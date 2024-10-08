@@ -1,5 +1,5 @@
 const {
-  selectRecord,
+  customRecord,
   createTable,
   checkRecordExists,
   insertRecord,
@@ -10,13 +10,47 @@ const { uploadFile } = require("../middlewares/fileUpload");
 const itemSchema = require("../schema/itemSchema");
 const mysql = require("mysql");
 const config = require("../db/config");
-const { query } = require("express");
-const pool = mysql.createPool(config);
 
 const fetchItems = async (req, res, next) => {
+  const hotelId = req.query.id;
+  console.log(req.query.id);
   try {
-    const itemData = await selectRecord("dish");
-    APIData(itemData)(req, res);
+    const query = `SELECT 
+        m.name AS menu_name,
+        d.name AS dish_name,
+        d.description AS description,
+        d.price AS price,
+        d.dish_image AS dish_image
+    FROM 
+        restaurants r
+    JOIN 
+        menu m ON r.restaurant_id = m.restaurant_id
+    JOIN 
+        dishes d ON m.menu_id = d.menu_id
+    JOIN 
+        restaurants h ON r.restaurant_id = h.restaurant_id
+    WHERE 
+        h.restaurant_id = ?;`;
+    const itemData = await customRecord(query, [hotelId]);
+
+    const transformedData = itemData.reduce((acc, item) => {
+      // If this menu category doesn't exist yet, create it with an empty array
+      if (!acc[item.menu_name]) {
+        acc[item.menu_name] = [];
+      }
+
+      // Push the dish to the appropriate menu category array
+      acc[item.menu_name].push({
+        dish_name: item.dish_name,
+        dish_description: item.description,
+        dish_price: item.price,
+        dish_image: item.dish_image,
+      });
+
+      return acc;
+    }, {});
+
+    APIData(transformedData)(req, res);
   } catch (err) {
     next(new APIError("Data not Found", 200, false, null));
   }
